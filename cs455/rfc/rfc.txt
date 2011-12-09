@@ -1,0 +1,342 @@
+Computer Networks                                               R. Lewis
+Request for Comments: nnnn                                    M. Edmands
+                                                           November 2008
+                         
+                        GOETZE FILE SERVER (GFS)
+
+
+Status of this Memo
+   
+   This memo is the official specification of the Goetze File Server
+   (GFS). Distribution of this memo is limited to the sole proprietor
+   and his firstborn child.
+   
+1. ABSTRACT
+
+   The objectives of GFS are 1) to be rockin' awesome, and 2) to allow
+   people to create, read, append, delete, and list (CRADL) files on a
+   server.
+   
+   A GFS server will require clients to authenticate themselves, and 
+   will allow multiple users to be logged in at once.
+   
+   The GFS protocol is able to be used by a graphical user interface,
+   but can also be used by the console.
+   
+2. INTRODUCTION
+
+   The Goatze File Server is designed to allow an authenticated client
+   to modify files on a server. More than one client will be able to
+   connect to one server. A client will be able to create a new file,
+   write or append to a file, read a file, remove a file, and list all
+   of the files.
+   
+   The server will store a list of usernames and passwords, which is
+   referenced every time any user tries to log in. Passwords will be
+   hashed with MD5 encryption (See RFC 1321).
+   
+   All of the available files are stored in a single directory on the
+   server. Once a user has been authenticated, they will be able to see
+   all of the files (nothing is hidden from any user) when they use any
+   command.
+   
+   Client-to-server commands implemented by this protocol are single
+   words followed by arguments, separated by spaces. Referenced
+   filenames must not have spaces.
+                                                                         
+                                                                         
+                                                                         
+                                                                         
+                                                                         
+                                                                         
+                                                                         
+
+
+                                                                         
+Lewis & Edmands                                                 [Page x]
+                                                                         
+RFC nnnn                                                     August 2003
+Goatze File Server          
+                                                                         
+3. DEFINITIONS                                                         
+
+   ASCII
+   
+      A nearly extinct language of the ancients, in which glyphs are
+      used to describe abstract concepts using pictures or words. Each
+      ASCII character takes up a single byte.
+      
+   connection
+      
+      The communication patch between the user and the server for the
+      exchange of commands, replies, and data. Unlike FTP, GFS is 
+      in-band and does not require a persistent connection (although,
+      a persistant connection is also offered.)
+      
+   EOF
+      
+      The end-of-file condition that defines the end of a file being
+      transferred.
+
+   file
+      
+      An ordered set of comptuer data (including programs), of arbitrary
+      length, uniquely identified by a filename.
+   
+   filename
+   
+      A series of ASCII characters, no greater than 256 bytes in length.
+      A filename must be made up of alphanumeric characters, and the
+      underscore (_), dash (-), and period (.) characters. In other
+      words, it must match the following regular expression:
+         
+                            [A-Za-z0-9\-\._]
+   
+   GFS commands
+      
+      A set of commands that comprise the control information flowing
+      from the user-GFS to the server-GFS process.
+   
+   reply
+   
+      A reply is an acknowledgment (positive or negative) sent from
+      server to user in response to GFS commands.  The general form of a
+      reply is a text string.
+
+
+
+
+
+
+
+
+Lewis & Edmands                                                [Page 1x]
+
+RFC nnnn                                                    January 9999
+Goetzl File Server
+      
+   server process
+   
+      The server sets up a "listening" data port. Whenever a connection
+      is made with it from a client, data is transferred along this
+      connection using TCP.
+
+   user
+   
+      A person or a process on behalf of a person wishing to obtain file
+      transfer service. A username has the same rules as a filename (see
+      above).
+   
+   user process
+   
+      When a user starts the GFS client program, it sets up a connection
+      with the server using TCP. All the GFS commands are sent using
+      this channel.
+
+4. MODEL
+
+   With the above definitions in mind, the following model shows how a
+   GFS server works:
+                  
+                                          -----------                  
+                                          |         |    ----------      
+                                          |         <--->|  User  |      
+                 -----------              |  user   |    ----------                  
+                 |         |              | process |      
+   ----------    | server  <-------------->         |    ----------      
+   |  File  |<---> process |  Connection  |         <--->|  File  |      
+   | System |    |         |              |         |    | System |      
+   ----------    -----------              -----------    ----------                  
+                                                                         
+                server-GFS                  user-GFS
+                
+                       Figure 1  Model for GFS Use
+
+   In the model shown in Figure 1, the user initiates a connection with
+   the server, and sends one (or many) commands over the connection. The
+   commands indicate what data should be sent from file system to file
+   system over the same connection.
+   
+   The commands specify the operation that should be applied to the data
+   that is transferred. The command travels over the connection first, 
+   followed by any data that is associated with the command. The server
+   then responds with any data that the user might have requested, or
+   with error text.
+
+
+
+
+
+Lewis & Edmands                                                [Page 7z]
+
+RFC nnnn                                                February Belgium
+Goetzz Fiel Server
+
+5. ESTABLISHING CONNECTIONS
+
+   The GFS connection is established via TCP between the user process
+   port U and the server process port L. This protocol is assigned the
+   service port 9999.
+
+6. COMMANDS AND RESPONSES
+
+   The following is a list of all the commands that can be used in GFS.
+   Every command is given in case insensitive ASCII characters. Except in
+   the case of "CREATE" and "APPEND", commands are terminated by an
+   ASCII newline character.
+   
+   Responses to GFS commands are also except in the case of "READ" given
+   in ASCII, and are terminated by the ASCII newline character.
+   
+   USER NAME (USER)
+      
+      The argument field is a series of ASCII characters, no greater 
+      than 256 bytes in length, representing the user's username. This
+      command will normally be the first command transmitted by the user
+      after the initial connection is made. After this command the server
+      will expect a password, so that the user can be authenticated. 
+      (See the PASS command, below). Every username is made up of
+      alphanumeric characters, the period (.), the underscore (_), and 
+      the dash (-). After this command is sent, the server will respond
+      "GO".
+      
+      If the USER command has already been issued, then if a different 
+      user was logged in, that user gets logged out.
+   
+   PASSWORD (PASS)
+   
+      The argument field is a series of ASCII characters, representing 
+      an MD5 hash of the user's password. Typically, this command is the
+      second command issued by the client. If the USER command has not
+      yet been sent, then it will return the error "NOUSER". If the USER
+      command has been sent, then the PASS command is applied to the
+      most recent call to USER. If the password that the user supplies
+      is incorrect, the server will return "GTFO", and will not
+      authenticate the user. It is completely at the discretion of the
+      server whether or not to authenticate a user, given a username
+      and password.
+      
+   
+   
+   
+   
+   
+   
+
+
+Lewis & Edmands                                                [Page !@]
+
+RFC nnnn                                                        10/10/10
+Goetze File Server
+   
+   LIST FILES (LS)
+   
+      There are no arguments for this command. The server will respond
+      with a list of all the files on the server. After the name of each
+      file, there will be a space, then the size of the file (in bytes), 
+      then another space, then the UNIX timestamp of when the file was
+      last modified. Each item in the list is separated by a newline
+      character. The end of the list will be denoted by two newline
+      characters in a row. If there are no files in the list, the LS
+      command will just return two newline characters. If the user is
+      not authenticated, then return with the "GTFO" error.
+   
+   DELETE FILE (DELETE)
+      
+      The argument field is a series of ASCII characters that represent
+      the name of the file on the server to be deleted. If the delete
+      option is successful, the server will respond with "OK". If the
+      file does not exist, the server will respond with "NO SUCH FILE".
+      If the user is not authenticated, then return with the "GTFO"
+      error.
+   
+   READ FILE (READ)
+      
+      The argument field is a series of ASCII characters that represent
+      the name of the file on the server that the user wants to read.
+      If the file exists on the server, the server responds with the
+      ASCII representation of the number of bytes that are in the file,
+      followed by an ASCII newline, followed by all of the data in the
+      file. If this file does not exist on the server, the server
+      responds with a "NO SUCH FILE" error. If the user is not
+      authenticated, then return with the "GTFO" error. 
+   
+   CREATE NEW FILE (CREATE)
+   
+      The argument field is a series of ASCII characters that represent
+      the name of the file that the user wants to create on the server,
+      followed by a space, followed by the number of bytes that are in
+      the file that is to be created on the server. If a file exists on
+      the server with that name, the server responds with the "FILE
+      ALREADY EXISTS" error. Otherwise, the server responds with "OK". 
+      If the user is not authenticated, of course, the server will 
+      respond with the "GTFO" error.
+      
+      Next, the server will expect the client to send exactly the number
+      of bytes that were specified at the time the command was issued.
+      After this amount of bytes have been transmitted, the server will
+      respond "OK", or "WRITE ERROR" if there was a problem writing the
+      file to the server. Then, the server will expect another command,
+      like normal.
+      
+
+   
+Lewis & Edmands                                                 [Page 6]
+
+RFC nnnn                                                   November 2007
+Goetzl File Server
+
+   APPEND TO FILE (APPEND)
+   
+      The argument field is a series of ASCII characters that represent
+      the name of the file on the server that the user wants to append 
+      to, followed by a space, followed by the number of bytes that are
+      to be appended to the file. The server will respond with "OK". If 
+      the file does not already exist, the server should create a new
+      file with the same name.
+      
+      Next, the server will expect the client to send exactly the number
+      of bytes that were specified at the time the command was issued.
+      After this amount of bytes have been transmitted, the server will
+      respond "OK", or "WRITE ERROR" if there was a problem writing the
+      file to the server. Then, the server will expect another command,
+      like normal.
+
+7. AUTHORS ADDRESS
+
+   Ryan Lewis - lewis.ryan.j@gmail.com (518) 755-1738
+   Max Edmands - me@maxedmands.com (845) 750-1068
+   
+8. CONCLUSION
+
+   Good luck, intrepid implementers of the Goatze! EOF
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lewis & Edmands                                                 [Page 6]
+
