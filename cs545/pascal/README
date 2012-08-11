@@ -1,0 +1,32 @@
+Ryan Lewis
+CS545
+Pascal Compiler
+--------------------
+
+0. Building and Running:
+   * Note: This was tested in Mac OS X 10.6.7 with GCC 4.2.1
+           I couldn't get the assembly to work in x86 Ubuntu... maybe you'll
+           have better luck?
+   * Note: There are two debug flags that can be enabled in the Makefile:
+     ** PRINT_SYNTAX_TREE: will print the syntax tree for each BEGIN-END block
+     ** PRINT_SYMBOL_TABLE: will print the symbol table in each scope
+   - run `make`
+   - run `./pascal < program.p > output.s`
+
+1. Test Files:
+   - In test_files folder
+     - ifthen.p: tests if-then-else support, nested statments, write()
+     - example.p: tests function calls, expressions, write()
+     - boo.p: the sample file that you made when I was demoing it for you
+   - *.s files in there are example assembly output in case it doesn't compile
+
+2. Limitations:
+   - No loop support
+   - No real support
+   - No array (int or real) support
+   - No non-local access
+   - No expr_gencode() panic mode support
+   - No read (scanf) support
+   - Saving register states will save all values of all registers,not just
+     those that were used.
+   - Maximum number of scopes is static (upper bound of 10), not dynamic
